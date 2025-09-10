@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>3D Character Models Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#0f1724; --card:#0b1220; --muted:#94a3b8; --accent:#7c3aed; --glass: rgba(255,255,255,0.03);
+      --success:#10b981; --danger:#ef4444;
+      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,var(--bg),#071026);color:#e6eef8}
+    .app{max-width:1200px;margin:28px auto;padding:20px}
+    header{display:flex;gap:16px;align-items:center;justify-content:space-between}
+    .brand{display:flex;gap:12px;align-items:center}
+    .logo{width:44px;height:44px;border-radius:8px;background:linear-gradient(135deg,#4f46e5,#06b6d4);display:flex;align-items:center;justify-content:center;font-weight:700}
+    h1{font-size:18px;margin:0}
+    p.lead{color:var(--muted);margin:0;font-size:13px}
+
+    .controls{display:flex;gap:12px;align-items:center}
+    .search{background:var(--glass);border:1px solid rgba(255,255,255,0.04);padding:8px 12px;border-radius:10px;color:inherit}
+    .btn{background:var(--accent);border:none;padding:8px 12px;border-radius:10px;color:white;cursor:pointer}
+    .secondary{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:8px 12px;border-radius:10px;color:var(--muted);cursor:pointer}
+
+    .layout{display:grid;grid-template-columns:360px 1fr;gap:18px;margin-top:18px}
+
+    /* Sidebar list */
+    .sidebar{background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);padding:12px;border-radius:12px}
+    .filters{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+    .chip{padding:6px 10px;background:rgba(255,255,255,0.02);border-radius:999px;font-size:13px;color:var(--muted);cursor:pointer;border:1px solid transparent}
+    .chip.active{background:linear-gradient(90deg,#6d28d9,#0891b2);color:white;border:1px solid rgba(255,255,255,0.06)}
+
+    .list{display:flex;flex-direction:column;gap:10px;height:62vh;overflow:auto;padding-right:6px}
+    .card{display:flex;gap:10px;align-items:center;padding:10px;border-radius:10px;background:rgba(255,255,255,0.02);cursor:pointer;border:1px solid transparent}
+    .card:hover{border-color:rgba(255,255,255,0.03)}
+    .thumb{width:72px;height:72px;border-radius:8px;background:linear-gradient(180deg,#0f1724,#0b1220);display:flex;align-items:center;justify-content:center;font-weight:600}
+    .meta{flex:1}
+    .meta small{display:block;color:var(--muted);font-size:12px}
+    .stats{display:flex;gap:8px;margin-top:6px;font-size:12px;color:var(--muted)}
+
+    /* Main area */
+    .main{background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);padding:16px;border-radius:12px;min-height:62vh}
+    .toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+    .grid{display:grid;grid-template-columns:1fr 360px;gap:14px}
+
+    .preview{background:linear-gradient(180deg,#071023,#061022);border-radius:12px;padding:12px;min-height:380px;display:flex;flex-direction:column}
+    .preview canvas{width:100%;height:100%;border-radius:8px;background:linear-gradient(180deg,#041022,#021018)}
+    .info{padding:12px}
+    .info h2{margin:0 0 6px 0}
+    .info .tag{display:inline-block;padding:6px 8px;border-radius:8px;background:rgba(255,255,255,0.02);font-size:13px}
+
+    .detail{background:rgba(255,255,255,0.01);padding:12px;border-radius:10px}
+    .row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed rgba(255,255,255,0.02)}
+    .row:last-child{border-bottom:none}
+
+    footer{margin-top:14px;color:var(--muted);font-size:13px}
+
+    /* modal */
+    .modal-backdrop{position:fixed;inset:0;background:rgba(2,6,23,0.6);display:flex;align-items:center;justify-content:center}
+    .modal{background:linear-gradient(180deg,#071029,#071427);padding:18px;border-radius:12px;width:720px}
+    label{display:block;margin:8px 0 4px;color:var(--muted);font-size:13px}
+    input,select,textarea{width:100%;padding:8px;border-radius:8px;background:transparent;border:1px solid rgba(255,255,255,0.04);color:inherit}
+
+    /* responsive */
+    @media (max-width:980px){.layout{grid-template-columns:1fr}.grid{grid-template-columns:1fr}.sidebar{order:2}.main{order:1}}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="brand">
+        <div class="logo">3D</div>
+        <div>
+          <h1>3D Character Models Dashboard</h1>
+          <p class="lead">Browse, edit and export 3D human character metadata</p>
+        </div>
+      </div>
+      <div class="controls">
+        <input id="search" class="search" placeholder="Search by name, tag or attribute...">
+        <button id="addBtn" class="btn">+ Add character</button>
+        <button id="exportBtn" class="secondary">Export JSON</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="filters">
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <div class="chip active" data-filter="all">All</div>
+            <div class="chip" data-filter="rigged">Rigged</div>
+            <div class="chip" data-filter="scanned">Scanned</div>
+            <div class="chip" data-filter="stylized">Stylized</div>
+            <div class="chip" data-filter="game-ready">Game-ready</div>
+          </div>
+        </div>
+        <div class="list" id="list"></div>
+      </aside>
+
+      <main class="main">
+        <div class="toolbar">
+          <div><strong id="count">0</strong> characters</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <select id="sort" class="secondary">
+              <option value="name">Sort: Name</option>
+              <option value="poly">Sort: Polycount</option>
+              <option value="created">Sort: Newest</option>
+            </select>
+            <button id="downloadSample" class="secondary">Download sample CSV</button>
+          </div>
+        </div>
+
+        <div class="grid">
+          <section class="preview">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div style="display:flex;gap:12px;align-items:center">
+                <div style="width:54px;height:54px;border-radius:8px;background:linear-gradient(135deg,#7c3aed,#0891b2);display:flex;align-items:center;justify-content:center;font-weight:700" id="previewInitials">AB</div>
+                <div>
+                  <h2 id="previewName">Select a character</h2>
+                  <small id="previewTags" style="color:var(--muted)"></small>
+                </div>
+              </div>
+              <div style="display:flex;gap:8px">
+                <button id="editBtn" class="secondary">Edit</button>
+                <button id="deleteBtn" class="secondary">Delete</button>
+              </div>
+            </div>
+
+            <div style="flex:1;margin-top:12px;display:flex;gap:12px">
+              <div style="flex:1;border-radius:10px;background:linear-gradient(180deg,#021424,#07102a);padding:10px;display:flex;flex-direction:column" id="canvasWrap">
+                <!-- Minimal WebGL preview (three.js) -->
+                <canvas id="previewCanvas"></canvas>
+                <small style="color:var(--muted);margin-top:8px">Simple geometric preview — replace with your viewer (three.js, model-viewer, babylon.js)</small>
+              </div>
+
+              <div style="width:260px">
+                <div class="detail">
+                  <div class="row"><div>Polycount</div><div id="poly">—</div></div>
+                  <div class="row"><div>Textures</div><div id="textures">—</div></div>
+                  <div class="row"><div>Rigged</div><div id="rigged">—</div></div>
+                  <div class="row"><div>Blendshapes</div><div id="blendshapes">—</div></div>
+                  <div class="row"><div>Format</div><div id="format">—</div></div>
+                </div>
+                <div style="margin-top:10px;text-align:center">
+                  <button id="downloadBtn" class="btn">Download JSON</button>
+                </div>
+              </div>
+            </div>
+
+          </section>
+
+          <aside style="padding:8px">
+            <div class="info">
+              <h3 style="margin:0 0 8px 0">Details</h3>
+              <div class="tag" id="detailRole">—</div>
+              <p style="color:var(--muted);font-size:13px;margin-top:8px" id="detailDesc">Select a character from the list to view full metadata and a geometric preview.</p>
+
+              <hr style="border:none;border-top:1px dashed rgba(255,255,255,0.02);margin:12px 0">
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <div style="font-size:13px;color:var(--muted)"><strong>Created</strong><br><span id="detailCreated">—</span></div>
+                <div style="font-size:13px;color:var(--muted)"><strong>Author</strong><br><span id="detailAuthor">—</span></div>
+              </div>
+            </div>
+          </aside>
+        </div>
+
+        <footer>Tip: Click +Add to create a new character. Use Export to share JSON with collaborators.</footer>
+      </main>
+    </div>
+  </div>
+
+  <!-- Modal (hidden) -->
+  <div id="modal" style="display:none" class="modal-backdrop">
+    <div class="modal">
+      <h3 id="modalTitle">Add character</h3>
+      <label>Name</label>
+      <input id="m_name">
+      <label>Role / Short description</label>
+      <input id="m_role">
+      <label>Tags (comma separated)</label>
+      <input id="m_tags">
+      <label>Polycount</label>
+      <input id="m_poly" type="number">
+      <label>Textures (count)</label>
+      <input id="m_textures" type="number">
+      <label>Rigged</label>
+      <select id="m_rigged"><option value="yes">Yes</option><option value="no">No</option></select>
+      <label>Blendshapes (count)</label>
+      <input id="m_blend" type="number">
+      <label>Format</label>
+      <input id="m_format">
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+        <button id="modalCancel" class="secondary">Cancel</button>
+        <button id="modalSave" class="btn">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Sample data
+    const sample = [
+      {id:1,name:'Asha Rivera',role:'Heroine - Realistic',tags:['scanned','rigged','game-ready'],poly:34500,textures:4,rigged:true,blend:25,format:'FBX',author:'Team A',created:'2025-02-14'},
+      {id:2,name:'Marco Tan',role:'Antagonist - Stylized',tags:['stylized','rigged'],poly:22000,textures:2,rigged:true,blend:8,format:'GLB',author:'Studio B',created:'2024-11-21'},
+      {id:3,name:'Lina Park',role:'Background character',tags:['stylized'],poly:4800,textures:1,rigged:false,blend:0,format:'OBJ',author:'Artist C',created:'2023-08-09'},
+      {id:4,name:'Eve-01',role:'Scan-based likeness',tags:['scanned','game-ready'],poly:78000,textures:6,rigged:true,blend:45,format:'USDZ',author:'Lab X',created:'2025-06-03'}
+    ];
+
+    let data = JSON.parse(JSON.stringify(sample));
+    let current = null; // selected id
+
+    const listEl = document.getElementById('list');
+    const countEl = document.getElementById('count');
+    const searchEl = document.getElementById('search');
+
+    function renderList(filter='all', q=''){
+      listEl.innerHTML='';
+      const ql=q.trim().toLowerCase();
+      const filtered = data.filter(d=>{
+        if(filter!=='all' && !d.tags.includes(filter)) return false;
+        if(!ql) return true;
+        return d.name.toLowerCase().includes(ql) || d.role.toLowerCase().includes(ql) || d.tags.join(' ').includes(ql);
+      });
+      countEl.textContent = filtered.length;
+      filtered.forEach(d=>{
+        const card = document.createElement('div'); card.className='card'; card.dataset.id=d.id;
+        const thumb = document.createElement('div'); thumb.className='thumb'; thumb.textContent = initials(d.name);
+        const m = document.createElement('div'); m.className='meta';
+        m.innerHTML = `<div style="display:flex;justify-content:space-between"><strong>${d.name}</strong><small>${d.created}</small></div><small>${d.role}</small>`;
+        const s = document.createElement('div'); s.className='stats'; s.innerHTML = `<span>poly: ${d.poly}</span><span>${d.rigged? 'rigged' : 'static'}</span>`;
+        m.appendChild(s);
+        card.appendChild(thumb); card.appendChild(m);
+        card.addEventListener('click',()=>select(d.id));
+        listEl.appendChild(card);
+      });
+    }
+
+    function initials(name){return name.split(' ').map(p=>p[0]).slice(0,2).join('').toUpperCase()}
+
+    function select(id){
+      current = data.find(x=>x.id===id);
+      if(!current) return;
+      document.querySelectorAll('.card').forEach(c=>c.style.borderColor='transparent');
+      const card = Array.from(document.querySelectorAll('.card')).find(c=>+c.dataset.id===id);
+      if(card) card.style.borderColor='rgba(255,255,255,0.06)';
+
+      document.getElementById('previewInitials').textContent = initials(current.name);
+      document.getElementById('previewName').textContent = current.name;
+      document.getElementById('previewTags').textContent = current.tags.join(', ');
+      document.getElementById('poly').textContent = current.poly.toLocaleString();
+      document.getElementById('textures').textContent = current.textures;
+      document.getElementById('rigged').textContent = current.rigged ? 'Yes' : 'No';
+      document.getElementById('blendshapes').textContent = current.blend;
+      document.getElementById('format').textContent = current.format;
+      document.getElementById('detailRole').textContent = current.role;
+      document.getElementById('detailDesc').textContent = `Tags: ${current.tags.join(', ')}.`;
+      document.getElementById('detailCreated').textContent = current.created;
+      document.getElementById('detailAuthor').textContent = current.author;
+
+      // update download json
+      document.getElementById('downloadBtn').onclick = ()=>downloadJSON(current);
+
+      // redraw preview simple geometry
+      drawPreview(current);
+    }
+
+    function downloadJSON(obj){
+      const blob = new Blob([JSON.stringify(obj,null,2)],{type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download = `${obj.name.replace(/\s+/g,'_')}.json`; a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // Modal form handlers
+    const modal = document.getElementById('modal');
+    const modalTitle = document.getElementById('modalTitle');
+    const m_name = document.getElementById('m_name');
+    const m_role = document.getElementById('m_role');
+    const m_tags = document.getElementById('m_tags');
+    const m_poly = document.getElementById('m_poly');
+    const m_textures = document.getElementById('m_textures');
+    const m_rigged = document.getElementById('m_rigged');
+    const m_blend = document.getElementById('m_blend');
+    const m_format = document.getElementById('m_format');
+
+    document.getElementById('addBtn').addEventListener('click',()=>openModal());
+    document.getElementById('modalCancel').addEventListener('click',closeModal);
+    document.getElementById('modalSave').addEventListener('click',saveModal);
+
+    function openModal(edit=false){
+      modal.style.display='flex';
+      if(edit && current){
+        modalTitle.textContent='Edit character';
+        m_name.value = current.name;
+        m_role.value = current.role;
+        m_tags.value = current.tags.join(', ');
+        m_poly.value = current.poly;
+        m_textures.value = current.textures;
+        m_rigged.value = current.rigged? 'yes' : 'no';
+        m_blend.value = current.blend;
+        m_format.value = current.format;
+      } else {
+        modalTitle.textContent='Add character';
+        m_name.value=''; m_role.value=''; m_tags.value=''; m_poly.value=10000; m_textures.value=1; m_rigged.value='yes'; m_blend.value=0; m_format.value='GLB';
+      }
+    }
+    function closeModal(){ modal.style.display='none'; }
+    function saveModal(){
+      const newObj = {
+        id: current && modalTitle.textContent.startsWith('Edit')? current.id : Date.now(),
+        name: m_name.value || 'Unnamed',
+        role: m_role.value || '',
+        tags: m_tags.value.split(',').map(s=>s.trim()).filter(Boolean),
+        poly: parseInt(m_poly.value||0),
+        textures: parseInt(m_textures.value||0),
+        rigged: m_rigged.value==='yes',
+        blend: parseInt(m_blend.value||0),
+        format: m_format.value || 'GLB',
+        author: 'You',
+        created: new Date().toISOString().slice(0,10)
+      };
+      if(modalTitle.textContent.startsWith('Edit')){
+        data = data.map(d=>d.id===newObj.id? newObj : d);
+      } else data.unshift(newObj);
+      closeModal(); renderList(activeFilter(), searchEl.value); select(newObj.id);
+    }
+
+    document.getElementById('editBtn').addEventListener('click',()=>{ if(current) openModal(true) });
+    document.getElementById('deleteBtn').addEventListener('click',()=>{ if(!current) return; if(confirm('Delete '+current.name+'?')){ data = data.filter(d=>d.id!==current.id); current=null; renderList(activeFilter(), searchEl.value); resetPreview(); }});
+
+    // chips
+    document.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{
+      document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));
+      c.classList.add('active'); renderList(activeFilter(), searchEl.value);
+    }));
+    function activeFilter(){ const el = document.querySelector('.chip.active'); return el? el.dataset.filter : 'all'}
+
+    searchEl.addEventListener('input',()=>renderList(activeFilter(), searchEl.value));
+    document.getElementById('exportBtn').addEventListener('click',()=>{ const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='characters.json'; a.click(); URL.revokeObjectURL(url); });
+
+    document.getElementById('downloadSample').addEventListener('click',()=>{
+      const csv = ['name,role,tags,poly,textures,rigged,blend,format,author,created'];
+      data.forEach(d=> csv.push(`${escapeCsv(d.name)},${escapeCsv(d.role)},${d.tags.join('|')},${d.poly},${d.textures},${d.rigged},${d.blend},${d.format},${d.author},${d.created}`));
+      const blob = new Blob([csv.join('\n')],{type:'text/csv'});
+      const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='characters_sample.csv'; a.click(); URL.revokeObjectURL(url);
+    });
+
+    function escapeCsv(s){ if(!s) return ''; return '"'+(s+'').replace(/"/g,'""')+'"'; }
+
+    // Sorting
+    document.getElementById('sort').addEventListener('change',e=>{
+      const v=e.target.value; if(v==='poly') data.sort((a,b)=>b.poly-a.poly); else if(v==='created') data.sort((a,b)=> new Date(b.created)-new Date(a.created)); else data.sort((a,b)=> a.name.localeCompare(b.name)); renderList(activeFilter(), searchEl.value);
+    });
+
+    // Small WebGL preview (draws a rotating cube) - minimal, no external libs
+    const canvas = document.getElementById('previewCanvas'); const ctx = canvas.getContext('2d');
+    let angle = 0; function fitCanvas(){ const r = canvas.getBoundingClientRect(); canvas.width = r.width*devicePixelRatio; canvas.height = r.height*devicePixelRatio; ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0); }
+    window.addEventListener('resize',fitCanvas); fitCanvas();
+
+    function drawPreview(model){
+      // simple representation: draw anthropomorphic-ish shapes scaled by polycount
+      fitCanvas(); angle += 0.02;
+      const w = canvas.width/devicePixelRatio, h = canvas.height/devicePixelRatio; ctx.clearRect(0,0,w,h);
+      // shadow
+      ctx.save(); ctx.translate(w/2,h/2);
+      // body size depends on polycount (for demo purposes)
+      const size = Math.max(40, Math.min(180, (model.poly||10000)/800));
+      ctx.rotate(angle);
+      // torso
+      ctx.fillStyle = 'rgba(255,255,255,0.06)'; ctx.fillRect(-size/2,-size/1.4,size,size*1.2);
+      // head
+      ctx.beginPath(); ctx.arc(0,-size, size/2.4,0,Math.PI*2); ctx.fill();
+      // limbs
+      ctx.fillRect(-size*0.9,-size/2, size*0.25, size*1.1); ctx.fillRect(size*0.65,-size/2, size*0.25, size*1.1);
+      ctx.restore();
+    }
+
+    function resetPreview(){ document.getElementById('previewInitials').textContent='—'; document.getElementById('previewName').textContent='Select a character'; document.getElementById('previewTags').textContent=''; document.getElementById('poly').textContent='—'; document.getElementById('textures').textContent='—'; document.getElementById('rigged').textContent='—'; document.getElementById('blendshapes').textContent='—'; document.getElementById('format').textContent='—'; document.getElementById('detailRole').textContent='—'; document.getElementById('detailDesc').textContent=''; document.getElementById('detailCreated').textContent='—'; document.getElementById('detailAuthor').textContent='—'; const c = canvas.getContext('2d'); c.clearRect(0,0,canvas.width, canvas.height);
+    }
+
+    // initial render
+    renderList();
+
+    // select first by default
+    if(data.length) select(data[0].id);
+  </script>
+</body>
+</html>
